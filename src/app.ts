@@ -5,6 +5,7 @@ import postRoutes from "./post/post.routes"
 import { errorHandler } from "./middlewares/error.middleware"
 import commentRoutes from "./Comment/Comment.routes"
 import interactionRoutes from "./interactions/interaction.routes"
+import sponsorRoutes from "./sponsor/route";
 
 const app: Application = express()
 
@@ -14,7 +15,7 @@ app.use("/users", userRoutes)
 app.use("/comments", commentRoutes)
 app.use("/auth", authRoutes)
 app.use("/interactions", interactionRoutes)
-
+app.use("/sponsor", sponsorRoutes);
 app.use(errorHandler)
 
 export default app

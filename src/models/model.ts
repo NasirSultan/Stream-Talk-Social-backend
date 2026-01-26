@@ -7,6 +7,7 @@ import { InteractionType } from "../common/enums/interactionType.enum";
 import { ReactionType } from "../common/enums/reactionType.enum";
 import { Sale } from "../interfaces/sale.interface";
 import { SaleStatus } from "../common/enums/saleStatus.enum"
+import { ISponsor } from "../interfaces/sponsor.interface";
 
 const userSchema: Schema<IUser> = new Schema(
   {
@@ -97,5 +98,20 @@ interactionSchema.index({ user: 1, targetId: 1, interactionType: 1 }, { unique: 
 
 const Interaction = mongoose.model<IInteraction>("Interaction", interactionSchema);
 
+const sponsorSchema: Schema<ISponsor> = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    companyName: { type: String, required: true },
+    logo: { type: String },
+    website: { type: String },
+    category: { type: String },
+    description: { type: String },
+    verified: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  },
+  { timestamps: true }
+);
 
-export const models = { User, Post, Comment, Interaction, Sale }
+const Sponsor = mongoose.model<ISponsor>("Sponsor", sponsorSchema);
+export const models = { User, Post, Comment, Interaction, Sale, Sponsor }
