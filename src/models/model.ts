@@ -98,6 +98,17 @@ interactionSchema.index({ user: 1, targetId: 1, interactionType: 1 }, { unique: 
 
 const Interaction = mongoose.model<IInteraction>("Interaction", interactionSchema);
 
+const representativeSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    role: { type: String },
+    email: { type: String },
+    phone: { type: String },
+    linkedIn: { type: String }
+  },
+  { _id: true }
+)
+
 const sponsorSchema: Schema<ISponsor> = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -107,11 +118,11 @@ const sponsorSchema: Schema<ISponsor> = new Schema(
     category: { type: String },
     description: { type: String },
     verified: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    representatives: [representativeSchema]
   },
   { timestamps: true }
-);
+)
+
 
 const Sponsor = mongoose.model<ISponsor>("Sponsor", sponsorSchema);
 export const models = { User, Post, Comment, Interaction, Sale, Sponsor }
