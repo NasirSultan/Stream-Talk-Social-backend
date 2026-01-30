@@ -109,6 +109,17 @@ const representativeSchema = new Schema(
   { _id: true }
 )
 
+const productSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    media: { type: String },
+    link: { type: String },
+    category: { type: String }
+  },
+  { _id: true }
+)
+
 const sponsorSchema: Schema<ISponsor> = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -118,7 +129,8 @@ const sponsorSchema: Schema<ISponsor> = new Schema(
     category: { type: String },
     description: { type: String },
     verified: { type: Boolean, default: false },
-    representatives: [representativeSchema]
+    representatives: [representativeSchema],
+        products: [productSchema]
   },
   { timestamps: true }
 )
