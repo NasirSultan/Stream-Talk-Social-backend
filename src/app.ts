@@ -6,7 +6,7 @@ import { errorHandler } from "./middlewares/error.middleware"
 import commentRoutes from "./Comment/Comment.routes"
 import interactionRoutes from "./interactions/interaction.routes"
 import sponsorRoutes from "./sponsor/route";
-
+import eventRoutes from "./events/event.routes"
 const app: Application = express()
 
 app.use(express.json())  // FIXED: Changed expresson() to express.json()
@@ -16,6 +16,7 @@ app.use("/comments", commentRoutes)
 app.use("/auth", authRoutes)
 app.use("/interactions", interactionRoutes)
 app.use("/sponsor", sponsorRoutes);
+app.use("/events", eventRoutes)
 app.use(errorHandler)
 
 export default app

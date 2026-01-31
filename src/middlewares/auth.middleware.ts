@@ -19,3 +19,13 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     return res.status(401).json({ message: "Invalid token" })
   }
 }
+
+export const authorizeOrganizer = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" })
+
+  if (req.user.role !== "organizer") {
+    return res.status(403).json({ message: "Forbidden: Organizer access only" })
+  }
+
+  next()
+}

@@ -8,6 +8,10 @@ import { ReactionType } from "../common/enums/reactionType.enum";
 import { Sale } from "../interfaces/sale.interface";
 import { SaleStatus } from "../common/enums/saleStatus.enum"
 import { ISponsor } from "../interfaces/sponsor.interface";
+import { IEvent } from "../interfaces/event.interface"
+import { ISponsorRequest } from "../interfaces/sponsorRequest.interface"
+import { Connection } from "../interfaces/Connection.interface"
+
 
 const userSchema: Schema<IUser> = new Schema(
   {
@@ -134,7 +138,87 @@ const sponsorSchema: Schema<ISponsor> = new Schema(
   },
   { timestamps: true }
 )
-
-
 const Sponsor = mongoose.model<ISponsor>("Sponsor", sponsorSchema);
-export const models = { User, Post, Comment, Interaction, Sale, Sponsor }
+
+
+const ticketSchema = new Schema(
+  {
+    type: { type: String, required: true },
+    price: { type: Number, required: true },
+    quantity: { type: Number, required: true }
+  },
+  { _id: true }
+)
+
+const eventSponsorRequestSchema = new Schema<ISponsorRequest>(
+  {
+    sponsorId: { type: Schema.Types.ObjectId, ref: "Sponsor", required: true },
+    category: { type: String, enum: ["main", "sub"], required: true },
+    status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+)
+
+const purchaseSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    ticketType: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    token: { type: String, required: true },
+    purchasedAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+)
+
+const eventSchema: Schema<IEvent> = new Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    mapLink: { type: String },
+    location: { type: String },
+    type: { type: String, enum: ["hybrid", "online"], required: true },
+    token: { type: String, length: 6 },
+    startTime: { type: Date, required: true },
+    endTime: { type: Date, required: true },
+    publishForRegistration: { type: Boolean, default: false },
+    tickets: {
+      type: [ticketSchema],
+      required: function () { return this.publishForRegistration === true }
+    },
+    totalCapacity: { type: Number },
+    reservedTickets: { type: Number, default: 0 },
+    sponsorId: { type: Schema.Types.ObjectId, ref: "Sponsor" },
+     sponsorRequests: [eventSponsorRequestSchema],
+         purchases: [purchaseSchema]
+  },
+  
+  { timestamps: true }
+)
+
+eventSchema.pre("save", function () {
+  if (this.publishForRegistration && this.tickets && this.tickets.length > 0) {
+    const ticketsCapacity = this.tickets.reduce((acc, t) => acc + t.quantity, 0)
+    const reserved = this.reservedTickets || 0
+    this.totalCapacity = ticketsCapacity + reserved
+  } else {
+    this.reservedTickets = undefined
+  }
+})
+
+const Event = mongoose.model<IEvent>("Event", eventSchema)
+
+const connectionSchema: Schema<Connection> = new Schema(
+  {
+    requester: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    recipient: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    status: { type: String, enum: ["pending", "accepted", "rejected"], default: "pending" }
+  },
+  { timestamps: true }
+)
+
+connectionSchema.index({ requester: 1, recipient: 1 }, { unique: true })
+ const ConnectionModel = mongoose.model<Connection>("Connection", connectionSchema)
+ 
+export const models = { User, Post, Comment, Interaction, Sale, Sponsor, Event, ConnectionModel }

@@ -86,11 +86,11 @@ export const resetUserPassword = async (email: string, otp: string, password: st
 }
 
 export const getAllUsers = async () => {
-  const users = await User.find({}, { name: 1, email: 1, password: 1 })
+  const users = await User.find({}, { name: 1, email: 1, role: 1 })
   return users.map(user => ({
     userId: user._id,
     name: user.name,
     email: user.email,
-    password: user.password
+     role: user.role,
   }))
 }
