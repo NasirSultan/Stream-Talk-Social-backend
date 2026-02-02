@@ -1,7 +1,7 @@
 import { Types } from "mongoose"
 import { models } from "../models/model"
 const { User ,ConnectionModel} = models
-
+import mongoose from 'mongoose'
 interface IUser {
   _id: Types.ObjectId | string
   name: string
@@ -70,3 +70,307 @@ export const getAcceptedConnections = async (userId: string) => {
     }
   })
 }
+
+
+
+export const suggestFriends = async (userId: string) => {
+  const userObjectId = new mongoose.Types.ObjectId(userId)
+
+  const suggestions = await ConnectionModel.aggregate([
+    {
+      $match: {
+        $or: [
+          { user1: userObjectId, status: 'accepted' },
+          { user2: userObjectId, status: 'accepted' }
+        ]
+      }
+    },
+    {
+      $project: {
+        friendId: {
+          $cond: {
+            if: { $eq: ['$user1', userObjectId] },
+            then: '$user2',
+            else: '$user1'
+          }
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: 'connections',
+        let: { myFriendId: '$friendId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$status', 'accepted'] },
+                  {
+                    $or: [
+                      { $eq: ['$user1', '$$myFriendId'] },
+                      { $eq: ['$user2', '$$myFriendId'] }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            $project: {
+              candidateId: {
+                $cond: {
+                  if: { $eq: ['$user1', '$$myFriendId'] },
+                  then: '$user2',
+                  else: '$user1'
+                }
+              }
+            }
+          }
+        ],
+        as: 'friendConnections'
+      }
+    },
+    { $unwind: '$friendConnections' },
+    {
+      $project: {
+        candidateId: '$friendConnections.candidateId',
+        mutualFriendId: '$friendId'
+      }
+    },
+    {
+      $match: {
+        candidateId: { $ne: userObjectId }
+      }
+    },
+    {
+      $lookup: {
+        from: 'connections',
+        let: { candidateId: '$candidateId' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $or: [
+                      {
+                        $and: [
+                          { $eq: ['$user1', userObjectId] },
+                          { $eq: ['$user2', '$$candidateId'] }
+                        ]
+                      },
+                      {
+                        $and: [
+                          { $eq: ['$user2', userObjectId] },
+                          { $eq: ['$user1', '$$candidateId'] }
+                        ]
+                      }
+                    ]
+                  },
+                  { $in: ['$status', ['accepted', 'pending']] }
+                ]
+              }
+            }
+          }
+        ],
+        as: 'existingConnection'
+      }
+    },
+    {
+      $match: {
+        existingConnection: { $size: 0 }
+      }
+    },
+    {
+      $group: {
+        _id: '$candidateId',
+        mutualFriends: { $sum: 1 },
+        mutualFriendIds: { $addToSet: '$mutualFriendId' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'candidateUser'
+      }
+    },
+    { $unwind: '$candidateUser' },
+    {
+      $lookup: {
+        from: 'users',
+        pipeline: [{ $match: { _id: userObjectId } }],
+        as: 'currentUser'
+      }
+    },
+    { $unwind: '$currentUser' },
+    {
+      $addFields: {
+        mutualFriendsScore: {
+          $multiply: [
+            {
+              $min: [
+                { $divide: ['$mutualFriends', 10] },
+                1
+              ]
+            },
+            40
+          ]
+        },
+        commonInterestsScore: {
+          $multiply: [
+            {
+              $cond: {
+                if: {
+                  $and: [
+                    { $isArray: '$candidateUser.interests' },
+                    { $isArray: '$currentUser.interests' }
+                  ]
+                },
+                then: {
+                  $min: [
+                    {
+                      $divide: [
+                        {
+                          $size: {
+                            $setIntersection: [
+                              '$candidateUser.interests',
+                              '$currentUser.interests'
+                            ]
+                          }
+                        },
+                        5
+                      ]
+                    },
+                    1
+                  ]
+                },
+                else: 0
+              }
+            },
+            25
+          ]
+        },
+        sameLocationScore: {
+          $cond: {
+            if: {
+              $and: [
+                { $ne: ['$candidateUser.location', null] },
+                { $ne: ['$currentUser.location', null] },
+                { $eq: ['$candidateUser.location', '$currentUser.location'] }
+              ]
+            },
+            then: 15,
+            else: 0
+          }
+        },
+        sameRoleScore: {
+          $cond: {
+            if: {
+              $and: [
+                { $ne: ['$candidateUser.role', null] },
+                { $ne: ['$currentUser.role', null] },
+                { $eq: ['$candidateUser.role', '$currentUser.role'] }
+              ]
+            },
+            then: 10,
+            else: 0
+          }
+        },
+        profileCompletenessScore: {
+          $multiply: [
+            {
+              $divide: [
+                {
+                  $add: [
+                    { $cond: [{ $ne: ['$candidateUser.bio', null] }, 1, 0] },
+                    { $cond: [{ $ne: ['$candidateUser.avatar', null] }, 1, 0] },
+                    { $cond: [{ $gt: [{ $size: { $ifNull: ['$candidateUser.interests', []] } }, 0] }, 1, 0] },
+                    { $cond: [{ $ne: ['$candidateUser.location', null] }, 1, 0] },
+                    { $cond: [{ $ne: ['$candidateUser.company', null] }, 1, 0] }
+                  ]
+                },
+                5
+              ]
+            },
+            5
+          ]
+        },
+        recentActivityScore: {
+          $multiply: [
+            {
+              $cond: {
+                if: { $ne: ['$candidateUser.lastActive', null] },
+                then: {
+                  $max: [
+                    0,
+                    {
+                      $subtract: [
+                        1,
+                        {
+                          $divide: [
+                            {
+                              $divide: [
+                                { $subtract: [new Date(), '$candidateUser.lastActive'] },
+                                1000 * 60 * 60 * 24
+                              ]
+                            },
+                            30
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                else: 0.5
+              }
+            },
+            5
+          ]
+        }
+      }
+    },
+    {
+      $addFields: {
+        totalScore: {
+          $add: [
+            '$mutualFriendsScore',
+            '$commonInterestsScore',
+            '$sameLocationScore',
+            '$sameRoleScore',
+            '$profileCompletenessScore',
+            '$recentActivityScore'
+          ]
+        }
+      }
+    },
+    { $sort: { totalScore: -1, mutualFriends: -1 } },
+    { $limit: 10 },
+    {
+      $project: {
+        _id: '$candidateUser._id',
+        name: '$candidateUser.name',
+        email: '$candidateUser.email',
+        avatar: '$candidateUser.avatar',
+        role: '$candidateUser.role',
+        location: '$candidateUser.location',
+        bio: '$candidateUser.bio',
+        mutualFriends: 1,
+        score: { $round: ['$totalScore', 2] },
+        scoreBreakdown: {
+          mutualFriends: { $round: ['$mutualFriendsScore', 2] },
+          commonInterests: { $round: ['$commonInterestsScore', 2] },
+          sameLocation: { $round: ['$sameLocationScore', 2] },
+          sameRole: { $round: ['$sameRoleScore', 2] },
+          profileCompleteness: { $round: ['$profileCompletenessScore', 2] },
+          recentActivity: { $round: ['$recentActivityScore', 2] }
+        }
+      }
+    }
+  ])
+
+  return suggestions
+}
+

@@ -65,3 +65,13 @@ export const getAcceptedConnections = async (req: Request, res: Response) => {
   }
 }
 
+export const suggestFriends = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id
+    const suggestions = await userService.suggestFriends(userId)
+    res.json({ suggestions })
+  } catch (err: any) {
+    res.status(500).json({ message: err.message })
+  }
+}
+
