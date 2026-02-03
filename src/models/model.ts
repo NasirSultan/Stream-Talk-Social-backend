@@ -1,3 +1,5 @@
+
+
 import mongoose, { Schema } from "mongoose"
 import { IUser } from "../interfaces/user.interface"
 import { Post } from '../interfaces/post.interface'
@@ -11,6 +13,7 @@ import { ISponsor } from "../interfaces/sponsor.interface";
 import { IEvent } from "../interfaces/event.interface"
 import { ISponsorRequest } from "../interfaces/sponsorRequest.interface"
 import { Connection } from "../interfaces/Connection.interface"
+import { IBooth } from "../interfaces/booth.interface"
 
 
 const userSchema: Schema<IUser> = new Schema(
@@ -221,4 +224,23 @@ const connectionSchema: Schema<Connection> = new Schema(
 connectionSchema.index({ requester: 1, recipient: 1 }, { unique: true })
  const ConnectionModel = mongoose.model<Connection>("Connection", connectionSchema)
  
-export const models = { User, Post, Comment, Interaction, Sale, Sponsor, Event, ConnectionModel }
+
+const boothSchema: Schema<IBooth> = new Schema(
+  {
+    sponsor: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    event: { type: Schema.Types.ObjectId, ref: "Event", required: true },
+    boothNumber: { type: String, required: true },
+    boothLocation: { type: String, required: true },
+    status: { type: String, enum: ["active", "inactive"], default: "active" }
+  },
+  { timestamps: true }
+)
+
+
+boothSchema.index({ event: 1, sponsor: 1 }, { unique: true }) 
+boothSchema.index({ event: 1, boothNumber: 1 }, { unique: true })
+
+ const Booth = mongoose.model<IBooth>("Booth", boothSchema)
+
+
+export const models = { User, Post, Comment, Interaction, Sale, Sponsor, Event, ConnectionModel, Booth }
