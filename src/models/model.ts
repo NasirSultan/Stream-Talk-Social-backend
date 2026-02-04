@@ -33,7 +33,8 @@ const postSchema: Schema<Post> = new Schema(
     title: { type: String, required: true },
     content: { type: String, required: true },
     author: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    file: { type: String },
+     files: { type: [String] },
+      frameValues: { type: String },     
     createdAt: { type: Date, default: Date.now }
   }
 )

@@ -3,6 +3,7 @@ export interface Post {
   title: string
   content: string
  author: string | mongoose.Types.ObjectId
-  file?: string
+   files?: string[]
+  frameValues?: string   
   createdAt?: Date
 }

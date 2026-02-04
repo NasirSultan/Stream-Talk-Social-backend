@@ -62,4 +62,20 @@ async getEventsAvailability() {
     })
   }
 
+
+  async getUpcomingEvents() {
+    const now = new Date()
+
+    return Event.find({
+      startTime: { $gt: now }
+    })
+     .populate({
+  path: "createdBy",
+  strictPopulate: false
+})
+
+      .sort({ startTime: 1 })
+  }
+
+
 }

@@ -6,8 +6,10 @@ import { uploadFileToImgbb } from "../utils/fileUpload"
 const { Post, Interaction, Comment, Sale } = models
 export const createPost = async (data: any) => {
   try {
-    if (data.file) {
-      data.file = await uploadFileToImgbb(data.file)
+    if (data.files && Array.isArray(data.files)) {
+      data.files = await Promise.all(
+        data.files.map((file: any) => uploadFileToImgbb(file))
+      )
     }
     const post = new Post(data)
     return await post.save()
@@ -16,6 +18,7 @@ export const createPost = async (data: any) => {
     throw new Error("Failed to create post")
   }
 }
+
 
 export const getPosts = async () => {
   try {

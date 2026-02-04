@@ -8,7 +8,7 @@ import saleRouter from "./sale/sale.router"
 const router = Router()
 
 router.get("/feed", authenticate, postController.getFeed)
-router.post("/", authenticate, upload.single("file"), postController.createPost)
+router.post("/", authenticate, upload.array("files", 5), postController.createPost)
 router.get("/", postController.getPosts)
 router.get("/:id", postController.getPostById)
 router.put("/:id", authenticate, postController.updatePost)

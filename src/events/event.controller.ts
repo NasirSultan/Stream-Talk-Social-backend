@@ -22,7 +22,14 @@ export const getEventsAvailability = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message })
   }
 }
-
+export const getUpcomingEvents = async (req: Request, res: Response) => {
+  try {
+    const events = await service.getUpcomingEvents()
+    res.json(events)
+  } catch (err: any) {
+    res.status(500).json({ message: err.message })
+  }
+}
 export const getEventById = async (req: Request, res: Response) => {
   const eventId = new Types.ObjectId(req.params.eventId)
   const event = await service.getEventById(eventId)

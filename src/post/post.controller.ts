@@ -3,9 +3,11 @@ import * as postService from "./post.service"
 import { MulterError } from "multer"
 
 export const createPost = async (req: Request, res: Response) => {
-  try {
+ try {
     const data = req.body
-    if (req.file) data.file = req.file.buffer
+    if (req.files && Array.isArray(req.files)) {
+      data.files = req.files.map(file => file.buffer)   // store multiple files
+    }
     if (req.user) data.author = req.user.id
 
     const post = await postService.createPost(data)
