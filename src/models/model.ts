@@ -14,7 +14,8 @@ import { IEvent } from "../interfaces/event.interface"
 import { ISponsorRequest } from "../interfaces/sponsorRequest.interface"
 import { Connection } from "../interfaces/Connection.interface"
 import { IBooth } from "../interfaces/booth.interface"
-
+import { IConversation } from "../interfaces/IConversation.interface"
+import { IMessage } from "../interfaces/chat.interface"
 
 const userSchema: Schema<IUser> = new Schema(
   {
@@ -244,4 +245,54 @@ boothSchema.index({ event: 1, boothNumber: 1 }, { unique: true })
  const Booth = mongoose.model<IBooth>("Booth", boothSchema)
 
 
-export const models = { User, Post, Comment, Interaction, Sale, Sponsor, Event, ConnectionModel, Booth }
+
+const conversationSchema: Schema<IConversation> = new Schema(
+  {
+    participants: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
+    lastMessage: {
+      content: { type: String },
+      sender: { type: Schema.Types.ObjectId, ref: "User" },
+      createdAt: { type: Date }
+    },
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }]
+  },
+  { timestamps: true }
+)
+
+conversationSchema.index({ participants: 1 })
+
+const messageSchema: Schema<IMessage> = new Schema(
+  {
+    conversationId: { type: Schema.Types.ObjectId, ref: "Conversation", required: true },
+    sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true },
+    readBy: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
+    deletedFor: [{ type: Schema.Types.ObjectId, ref: "User", default: [] }],
+    attachments: [{ type: String }]
+  },
+  { timestamps: true }
+)
+
+messageSchema.index({ conversationId: 1, createdAt: -1 })
+messageSchema.index(
+  { conversationId: 1, deletedFor: 1 },
+  { partialFilterExpression: { deletedFor: { $size: 0 } } }
+)
+
+messageSchema.methods.deleteForUser = async function(userId: string) {
+  const objectId = new mongoose.Types.ObjectId(userId)
+  if (!this.deletedFor.includes(objectId)) {
+    this.deletedFor.push(objectId)
+    await this.save()
+  }
+}
+
+const Conversation = mongoose.model<IConversation>("Conversation", conversationSchema)
+const Message = mongoose.model<IMessage>("Message", messageSchema)
+
+
+
+
+
+
+export const models = { User, Post, Comment, Interaction, Sale, Sponsor, Event, ConnectionModel, Booth, Conversation, Message }

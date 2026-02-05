@@ -7,6 +7,9 @@ import commentRoutes from "./Comment/Comment.routes"
 import interactionRoutes from "./interactions/interaction.routes"
 import sponsorRoutes from "./sponsor/route";
 import eventRoutes from "./events/event.routes"
+import chatRoutes from "./chat/chat.route"
+
+
 const app: Application = express()
 
 app.use(express.json())  // FIXED: Changed expresson() to express.json()
@@ -17,6 +20,7 @@ app.use("/auth", authRoutes)
 app.use("/interactions", interactionRoutes)
 app.use("/sponsor", sponsorRoutes);
 app.use("/events", eventRoutes)
+app.use("/chat", chatRoutes)
 app.use(errorHandler)
 
 export default app
