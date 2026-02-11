@@ -3,12 +3,16 @@ import { models } from "../models/model"
 const { Event } = models
 import { IEvent } from "../interfaces/event.interface"
 
-
+import { eventEmitter } from "../rag/ragEvent/ragEvent.service";
 
 export class EventService {
   async createEvent(data: IEvent) {
-    const event = new Event(data)
-    return event.save()
+    const event = new Event(data);
+    const savedEvent = await event.save();
+
+    eventEmitter.emit("eventCreated", savedEvent);
+
+    return savedEvent;
   }
 
   async getAllEvents() {
