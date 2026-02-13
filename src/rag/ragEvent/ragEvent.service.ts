@@ -121,21 +121,18 @@
 //   await service.addEventDetail(eventData);
 // });
 
-
 import chromaClient from "../chroma.client";
 import { llm } from "../../lib/llm";
 import { EventEmitter } from "events";
 
 export const eventEmitter = new EventEmitter();
 
-// ─── Config ────────────────────────────────────────────────────────────────
 const COLLECTION_NAME = "events";
-const CHUNK_SIZE = 200;         // words per chunk
-const CHUNK_OVERLAP = 30;       // overlapping words between chunks
-const CONTEXT_WORD_LIMIT = 600; // max words passed to LLM
+const CHUNK_SIZE = 200;
+const CHUNK_OVERLAP = 30;
+const CONTEXT_WORD_LIMIT = 600;
 const SIMILARITY_THRESHOLD = 1.8;
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
 function splitIntoWordChunksWithOverlap(text: string, maxWords: number, overlap: number): string[] {
   const allWords = text.split(/\s+/).filter(Boolean);
   const chunks: string[] = [];
@@ -152,11 +149,11 @@ function splitIntoWordChunksWithOverlap(text: string, maxWords: number, overlap:
 
 function buildEventContent(eventData: any): string {
   let content = `${eventData.title}\n${eventData.description || ""}\n`;
-  if (eventData.location)       content += `Location: ${eventData.location}\n`;
-  if (eventData.mapLink)        content += `Map: ${eventData.mapLink}\n`;
-  if (eventData.type)           content += `Type: ${eventData.type}\n`;
-  if (eventData.startTime)      content += `Start Time: ${new Date(eventData.startTime).toISOString()}\n`;
-  if (eventData.endTime)        content += `End Time: ${new Date(eventData.endTime).toISOString()}\n`;
+  if (eventData.location) content += `Location: ${eventData.location}\n`;
+  if (eventData.mapLink) content += `Map: ${eventData.mapLink}\n`;
+  if (eventData.type) content += `Type: ${eventData.type}\n`;
+  if (eventData.startTime) content += `Start Time: ${new Date(eventData.startTime).toISOString()}\n`;
+  if (eventData.endTime) content += `End Time: ${new Date(eventData.endTime).toISOString()}\n`;
   if (typeof eventData.reservedTickets === "number")
     content += `Reserved Tickets: ${eventData.reservedTickets}\n`;
 
@@ -170,10 +167,7 @@ function buildEventContent(eventData: any): string {
   return content.trim();
 }
 
-// ─── Service ───────────────────────────────────────────────────────────────
 export class RagEventService {
-
-  // Add or replace a raw content document for an event
   async addEventDocument(
     eventId: string,
     content: string,
@@ -187,8 +181,8 @@ export class RagEventService {
       const collection = await chromaClient.getOrCreateCollection({ name: COLLECTION_NAME });
       await collection.delete({ where: { eventId } });
 
-      const chunks   = splitIntoWordChunksWithOverlap(content, CHUNK_SIZE, CHUNK_OVERLAP);
-      const ids      = chunks.map((_, i) => `${eventId}_${i}`);
+      const chunks = splitIntoWordChunksWithOverlap(content, CHUNK_SIZE, CHUNK_OVERLAP);
+      const ids = chunks.map((_, i) => `${eventId}_${i}`);
       const metadatas = chunks.map(() => ({ eventId, ...metadata }));
 
       await collection.add({ ids, documents: chunks, metadatas });
@@ -200,7 +194,6 @@ export class RagEventService {
     }
   }
 
-  // Query across one event or all events
   async queryEventDocument(
     eventId: string | undefined,
     query: string,
@@ -221,10 +214,9 @@ export class RagEventService {
         include: ["documents", "distances"] as any,
       });
 
-      const rawDocs      = result.documents?.[0] || [];
+      const rawDocs = result.documents?.[0] || [];
       const rawDistances = (result as any).distances?.[0] || [];
 
-      // Filter by similarity threshold
       const docs = rawDocs.filter((doc, i): doc is string => {
         return typeof doc === "string" && (rawDistances[i] ?? Infinity) <= SIMILARITY_THRESHOLD;
       });
@@ -233,10 +225,9 @@ export class RagEventService {
         return { answer: [], sourcesUsed: 0 };
       }
 
-      // Build context up to word limit
       const combinedWords: string[] = [];
       for (const doc of docs) {
-        const words     = doc.split(/\s+/).filter(Boolean);
+        const words = doc.split(/\s+/).filter(Boolean);
         const remaining = CONTEXT_WORD_LIMIT - combinedWords.length;
         if (remaining <= 0) break;
         combinedWords.push(...words.slice(0, remaining));
@@ -279,7 +270,6 @@ export class RagEventService {
     }
   }
 
-  // Add a structured event object to the vector store
   async addEventDetail(eventData: any) {
     if (!eventData?._id || !eventData?.title) {
       throw new Error("Invalid event data: _id and title are required");
@@ -287,14 +277,13 @@ export class RagEventService {
 
     try {
       const collection = await chromaClient.getOrCreateCollection({ name: COLLECTION_NAME });
-      const content    = buildEventContent(eventData);
-      const eventId    = eventData._id.toString();
+      const content = buildEventContent(eventData);
+      const eventId = eventData._id.toString();
 
-      // Remove stale chunks before re-inserting
       await collection.delete({ where: { eventId } });
 
-      const chunks    = splitIntoWordChunksWithOverlap(content, CHUNK_SIZE, CHUNK_OVERLAP);
-      const ids       = chunks.map((_, i) => `${eventId}_${i}`);
+      const chunks = splitIntoWordChunksWithOverlap(content, CHUNK_SIZE, CHUNK_OVERLAP);
+      const ids = chunks.map((_, i) => `${eventId}_${i}`);
       const metadatas = chunks.map(() => ({ eventId }));
 
       await collection.add({ ids, documents: chunks, metadatas });
@@ -307,7 +296,6 @@ export class RagEventService {
   }
 }
 
-// ─── Event Listener ────────────────────────────────────────────────────────
 eventEmitter.on("eventCreated", async (eventData) => {
   try {
     const service = new RagEventService();
