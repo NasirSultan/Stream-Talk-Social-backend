@@ -294,7 +294,22 @@ export class RagEventService {
       throw err;
     }
   }
+
+  async deleteEventDocument(eventId: string) {
+    if (!eventId) {
+      throw new Error("eventId is required");
+    }
+
+    const collection = await chromaClient.getOrCreateCollection({ name: COLLECTION_NAME });
+
+    await collection.delete({ where: { eventId } });
+
+    return { success: true, eventId };
+  }
+
 }
+
+
 
 eventEmitter.on("eventCreated", async (eventData) => {
   try {
@@ -303,4 +318,9 @@ eventEmitter.on("eventCreated", async (eventData) => {
   } catch (err) {
     console.error("[RAG] eventCreated handler failed:", err);
   }
+});
+
+eventEmitter.on("eventDeleted", async (eventId: string) => {
+  const service = new RagEventService();
+  await service.deleteEventDocument(eventId);
 });

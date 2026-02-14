@@ -15,7 +15,8 @@ export class EventService {
     return savedEvent;
   }
 
-  async getAllEvents() {
+async getAllEvents() {
+    console.log("Database called to fetch events")
     return Event.find()
   }
 
@@ -27,9 +28,18 @@ export class EventService {
     return Event.findByIdAndUpdate(eventId, data, { new: true })
   }
 
-  async deleteEvent(eventId: Types.ObjectId) {
-    return Event.findByIdAndDelete(eventId)
+async deleteEvent(eventId: Types.ObjectId) {
+  const deletedEvent = await Event.findByIdAndDelete(eventId)
+
+  if (!deletedEvent) {
+    return { success: false, message: "Event not found" }
   }
+
+  eventEmitter.emit("eventDeleted", deletedEvent._id.toString())
+
+  return { success: true, message: "Event deleted successfully" }
+}
+
 
 async getEventsAvailability() {
     const events = await Event.find()

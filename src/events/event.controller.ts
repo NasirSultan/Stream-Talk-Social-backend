@@ -1,18 +1,39 @@
 import { Request, Response } from "express"
 import { EventService } from "./event.service"
 import { Types } from "mongoose"
+import crypto from "crypto"
+let cachedEvents: any = null
+let cachedHash: string | null = null
 
 const service = new EventService()
 
 export const createEvent = async (req: Request, res: Response) => {
   const eventData = { ...req.body, sponsorId: req.user?.id }
   const event = await service.createEvent(eventData)
+    cachedEvents = null
+  cachedHash = null
   res.status(201).json(event)
 }
 
 export const getAllEvents = async (req: Request, res: Response) => {
-  const events = await service.getAllEvents()
-  res.status(200).json(events)
+  if (req.headers["if-none-match"] && req.headers["if-none-match"] === cachedHash) {
+    console.log("ETag matched. Skipping database call.")
+    res.status(304).end()
+    return
+  }
+
+if (!cachedEvents) {
+  cachedEvents = await service.getAllEvents()
+  console.log("Database called to fetch events")
+  const eventsString = JSON.stringify(cachedEvents)
+  cachedHash = crypto.createHash("md5").update(eventsString).digest("hex")
+} else {
+  console.log("Serving events from cache")
+}
+
+
+  res.setHeader("ETag", cachedHash!)
+  res.status(200).json(cachedEvents)
 }
 export const getEventsAvailability = async (req: Request, res: Response) => {
   try {
@@ -47,6 +68,8 @@ export const updateEvent = async (req: Request, res: Response) => {
 export const deleteEvent = async (req: Request, res: Response) => {
   const eventId = new Types.ObjectId(req.params.eventId)
   const event = await service.deleteEvent(eventId)
+      cachedEvents = null
+  cachedHash = null
   res.status(200).json({ message: "Event deleted successfully" })
 }
 
