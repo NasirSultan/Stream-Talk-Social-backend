@@ -13,6 +13,7 @@
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "chromadb": "^3.3.0",
+    "deepagents": "^1.7.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "js-tiktoken": "^1.0.21",

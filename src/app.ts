@@ -8,7 +8,8 @@ import interactionRoutes from "./interactions/interaction.routes"
 import sponsorRoutes from "./sponsor/route";
 import eventRoutes from "./events/event.routes"
 import chatRoutes from "./chat/chat.route"
-import ragEventRoutes from "./rag/ragEvent/ragEvent.routes";
+import ragRoutes from "./rag/rag.router";
+
 
 const app: Application = express()
 
@@ -21,7 +22,7 @@ app.use("/interactions", interactionRoutes)
 app.use("/sponsor", sponsorRoutes);
 app.use("/events", eventRoutes)
 app.use("/chat", chatRoutes)
-app.use("/rag-events", ragEventRoutes);
+app.use("/rag", ragRoutes)
 app.use(errorHandler)
 
 export default app

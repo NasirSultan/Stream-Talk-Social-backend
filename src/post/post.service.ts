@@ -1,9 +1,10 @@
 import { models } from "../models/model"
 import { Types } from "mongoose"
-
+import { postEventEmitter } from "../rag/postRag/postRag.events"
 import { uploadFileToImgbb } from "../utils/fileUpload"
 
 const { Post, Interaction, Comment, Sale } = models
+
 export const createPost = async (data: any) => {
   try {
     if (data.files && Array.isArray(data.files)) {
@@ -12,7 +13,9 @@ export const createPost = async (data: any) => {
       )
     }
     const post = new Post(data)
-    return await post.save()
+    const savedData = await post.save()
+    postEventEmitter.emit("postCreated", savedData)
+    return savedData
   } catch (error: unknown) {
     if (error instanceof Error) throw new Error("Failed to create post: " + error.message)
     throw new Error("Failed to create post")
@@ -58,6 +61,9 @@ export const deletePost = async (id: string) => {
   try {
     const post = await Post.findByIdAndDelete(id)
     if (!post) throw new Error("Post not found")
+
+    postEventEmitter.emit("postDeleted", id)
+
     return post
   } catch (error: unknown) {
     if (error instanceof Error) throw new Error(error.message)
